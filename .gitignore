@@ -1,18 +1,21 @@
 *.apk
 *.ap_
 *.aab
-
 *.dex
+
 *.class
+*.jar
 
 *.log
 *.tmp
+*.temp
 
 cmake-build-*/
 
 *.slo
 *.lo
 *.o
+*.obj
 *.a
 *.la
 *.lai
@@ -20,17 +23,27 @@ cmake-build-*/
 *.so.*
 *.dll
 *.dylib
+*.lib
 
 x64/
+x86/
+x32/
 Temp/
 obj/
 bin/
 
 .vs/
-
+.vscode/
 .idea/
+*.swp
+*.swo
+
 *.ninja
 
 *.7z
 *.zip
 *.rar
+*.tar
+*.gz
+*.tgz
+*.bz2
