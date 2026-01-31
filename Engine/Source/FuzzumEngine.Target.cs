@@ -7,7 +7,7 @@ namespace FuzzumBuildTool
         public FuzzumEngineTarget()
             : base("FuzzumEngine")
         {
-            Type = TargetType.Program;  // Или Game, если движок как игра
+            Type = TargetType.Program;
             Platform = TargetPlatform.Win64;
             
             // Основные модули движка

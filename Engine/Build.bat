@@ -1,2 +1,2 @@
-Binaries\x64\Release\FuzzumBuildTool.exe "Engine\Source\FuzzumEngine.Target.cs" "Engine"
+Binaries\x64\Release\FuzzumBuildTool.exe "Source\FuzzumEngine.Target.cs" "."
 pause

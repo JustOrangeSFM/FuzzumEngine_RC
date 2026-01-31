@@ -6,7 +6,9 @@ namespace FuzzumBuildTool
     {
         public CoreModule() : base("Core")
         {
-            
+            ModuleCategory = ModuleCategory.Editor;
+            BuildType = ModuleBuildType.DynamicLibrary;
+
             // Platform-specific настройки
             if (IsPlatformWindows)
             {

@@ -8,7 +8,7 @@ namespace FuzzumBuildTool
     public abstract class TargetRules
     {
 
-        // база
+        //база
         public string Name { get; }
         public TargetType Type { get; set; }
         public TargetPlatform Platform { get; set; }

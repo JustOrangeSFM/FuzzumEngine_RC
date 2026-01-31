@@ -6,6 +6,9 @@ namespace FuzzumBuildTool
     {
         public CoreUObjectModule() : base("CoreUObject")
         {
+            BuildType = ModuleBuildType.DynamicLibrary;
+            ModuleCategory = ModuleCategory.Editor;
+
             // Зависит от Core
             PublicDependencyModuleNames.Add("Core");
             

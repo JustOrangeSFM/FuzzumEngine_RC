@@ -39,6 +39,7 @@ bin/
 *.swo
 
 *.ninja
+*.ninja_log
 
 
 

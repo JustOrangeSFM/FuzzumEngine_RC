@@ -6,6 +6,9 @@ namespace FuzzumBuildTool
     {
         public EngineModule() : base("Engine")
         {
+            ModuleCategory = ModuleCategory.Editor;
+            BuildType = ModuleBuildType.Executable;
+
             // Зависимости Engine
             PublicDependencyModuleNames.Add("Core");
             PublicDependencyModuleNames.Add("CoreUObject");
@@ -16,6 +19,8 @@ namespace FuzzumBuildTool
                 PublicAdditionalLibraries.Add("d3d11.lib");
                 PublicAdditionalLibraries.Add("dxgi.lib");
                 PublicAdditionalLibraries.Add("xinput.lib");
+                PublicSystemLibraries.Add("user32.lib");
+                PublicSystemLibraries.Add("kernel32.lib");
             }
             
             // Исходники Engine

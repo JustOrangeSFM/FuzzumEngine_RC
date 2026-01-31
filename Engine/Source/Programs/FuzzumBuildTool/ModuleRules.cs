@@ -4,12 +4,15 @@ using System.Reflection;
 namespace FuzzumBuildTool
 {
     //типы модулей
-    public enum ModuleType { Runtime, Editor }
+    public enum ModuleCategory { Runtime, Editor }
+    public enum ModuleBuildType { Executable, DynamicLibrary, StaticLibrary }
 
     public abstract class ModuleRules
     {
         public string Name { get; }
-        public ModuleType Type { get; set; } = ModuleType.Runtime;
+        public ModuleCategory ModuleCategory { get; set; } = ModuleCategory.Runtime;
+
+        public ModuleBuildType BuildType { get; set; } = ModuleBuildType.DynamicLibrary;
 
         // зависимости
         public List<string> PublicDependencies { get; set; } = new();
@@ -64,7 +67,7 @@ namespace FuzzumBuildTool
                 Target = target;
                 Name = GetType().Name.Replace("Module", "");
 
-                // Устанавливаем платформу из таргета через reflection
+                //устанавливаем платформу из таргета через reflection
                 try
                 {
                     var targetType = target.GetType();
@@ -90,6 +93,84 @@ namespace FuzzumBuildTool
             }
         }
 
+
+        public bool IsExe => BuildType == ModuleBuildType.Executable;
+        public bool IsDll => BuildType == ModuleBuildType.DynamicLibrary;
+        public bool IsLib => BuildType == ModuleBuildType.StaticLibrary;
+
+        public string GetOutputName()
+        {
+            switch (BuildType)
+            {
+                case ModuleBuildType.Executable:
+                    return IsPlatformWindows ? $"{Name}.exe" : Name;
+
+                case ModuleBuildType.DynamicLibrary:
+                    var prefix = IsPlatformWindows ? "" : "lib";
+                    var suffix = IsPlatformWindows ? ".dll" :
+                                 IsPlatformLinux ? ".so" : ".dylib";
+                    return $"{prefix}{Name}{suffix}";
+
+                case ModuleBuildType.StaticLibrary:
+                    var prefixLib = IsPlatformWindows ? "" : "lib";
+                    var suffixLib = IsPlatformWindows ? ".lib" : ".a";
+                    return $"{prefixLib}{Name}{suffixLib}";
+
+                default:
+                    return Name;
+            }
+        }
+
+
+        public string GetModuleAPI()
+        {
+            if (!IsDll)
+                return "";
+
+            return IsPlatformWindows ?
+                $"__declspec(dllexport)" :
+                $"__attribute__((visibility(\"default\")))";
+        }
+
+
+        public List<string> GetLinkerFlags()
+        {
+            var flags = new List<string>();
+
+            if (IsDll)
+            {
+                if (IsPlatformWindows)
+                {
+                    flags.Add("-shared");
+                    flags.Add("-Wl,--export-all-symbols");
+                }
+                else if (IsPlatformLinux)
+                {
+                    flags.Add("-shared");
+                    flags.Add("-fPIC");
+                }
+                else if (IsPlatformMac)
+                {
+                    flags.Add("-dynamiclib");
+                    flags.Add("-fPIC");
+                }
+            }
+            else if (IsLib)
+            {
+                // Для статических библиотек не нужны специальные флаги линковки
+            }
+            else if (IsExe)
+            {
+                if (IsPlatformWindows)
+                {
+                    flags.Add("-Wl,/subsystem:console");
+                }
+            }
+
+            return flags;
+        }
+
+
         protected ModuleRules(string name) => Name = name;
 
         // Платформенные проверки
@@ -107,8 +188,8 @@ namespace FuzzumBuildTool
             };
         }
 
-        //Едитор и рантайм
-        public bool IsEditor => Type == ModuleType.Editor;
-        public bool IsRuntime => Type == ModuleType.Runtime;
+        // Едитор и рантайм
+        public bool IsEditor => ModuleCategory == ModuleCategory.Editor;
+        public bool IsRuntime => ModuleCategory == ModuleCategory.Runtime;
     }
 }
