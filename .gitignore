@@ -40,10 +40,34 @@ bin/
 
 *.ninja
 
+
+
+*.exe
+*.dll
+*.pdb
+*.ilk
+*.exp
+*.lib
+
 *.7z
 *.zip
 *.rar
 *.tar
 *.gz
-*.tgz
-*.bz2
+
+
+Engine/Binaries/
+Engine/Intermediate/
+Engine/Saved/
+Engine/Temp/
+
+*.udeproj
+*.uproject
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+
+Build/
+bin/
+[Oo]bj/
