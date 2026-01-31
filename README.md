@@ -1,6 +1,9 @@
 # FuzzumEngine_RC
 Fuzzum Engine - 3D Crossplatform Game Engine
 
-It`s an analog of unreal engine 
+This is an experimental project that tries to replicate the Unreal Engine and may even bring something of its own. 
+
+There is also very little garbage here.
+
 
 
