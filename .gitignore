@@ -30,3 +30,7 @@ bin/
 
 .idea/
 *.ninja
+
+*.7z
+*.zip
+*.rar
