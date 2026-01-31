@@ -80,7 +80,7 @@ class Program
                 }
             }
             catch
-            {}
+            { }
 
             return module;
         }
@@ -436,7 +436,7 @@ class Program
         writer.WriteLine("rule link_dll");
         if (isWindows)
         {
-            writer.WriteLine($"  command = $link $target_triple -shared $in -o $out -Wl,--out-implib,$implibout");
+            writer.WriteLine($"  command = $link $target_triple -shared $in -o $out -Wl,$implibout");
         }
         else if (isLinux)
         {
@@ -582,8 +582,8 @@ class Program
 
                 // Include paths из зависимостей
                 var allDeps = new List<string>();
-                allDeps.AddRange(module.PublicDependencyModuleNames ?? new List<string>());     
-                allDeps.AddRange(module.PrivateDependencyModuleNames ?? new List<string>());  
+                allDeps.AddRange(module.PublicDependencyModuleNames ?? new List<string>());
+                allDeps.AddRange(module.PrivateDependencyModuleNames ?? new List<string>());
 
                 foreach (var dep in allDeps)
                 {
@@ -683,7 +683,7 @@ class Program
                 Console.WriteLine("\nWarning! Skipping line 678");
                 continue;
             }
-                
+
 
             // Пропускаем модули без объектных файлов
             if (!moduleObjectFiles.ContainsKey(moduleName) || moduleObjectFiles[moduleName].Count == 0)
@@ -691,14 +691,14 @@ class Program
                 Console.WriteLine("\nWarning! Skipping line 686. No obj files!");
                 continue;
             }
-                
+
 
             string ruleType = "link_dll";
             string outputFileName = moduleName;
 
             try
             {
-                var buildType = module.BuildType; 
+                var buildType = module.BuildType;
 
                 if (buildType != null)
                 {
@@ -751,7 +751,7 @@ class Program
             catch (Exception ex)
             {
                 Console.WriteLine($"  ERROR getting BuildType for {moduleName}: {ex.Message}");
-                
+
                 if (moduleName == "Engine" && target.Type.ToString() == "Program")
                 {
                     ruleType = "link_exe";

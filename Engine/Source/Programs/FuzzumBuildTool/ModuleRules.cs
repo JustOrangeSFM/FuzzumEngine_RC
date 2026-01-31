@@ -5,7 +5,7 @@ namespace FuzzumBuildTool
 {
     //типы модулей
     public enum ModuleCategory { Runtime, Editor }
-    public enum ModuleBuildType { Executable, DynamicLibrary, StaticLibrary }
+    public enum ModuleBuildType { Executable, DynamicLibrary }
 
     public abstract class ModuleRules
     {
@@ -96,7 +96,6 @@ namespace FuzzumBuildTool
 
         public bool IsExe => BuildType == ModuleBuildType.Executable;
         public bool IsDll => BuildType == ModuleBuildType.DynamicLibrary;
-        public bool IsLib => BuildType == ModuleBuildType.StaticLibrary;
 
         public string GetOutputName()
         {
@@ -110,11 +109,6 @@ namespace FuzzumBuildTool
                     var suffix = IsPlatformWindows ? ".dll" :
                                  IsPlatformLinux ? ".so" : ".dylib";
                     return $"{prefix}{Name}{suffix}";
-
-                case ModuleBuildType.StaticLibrary:
-                    var prefixLib = IsPlatformWindows ? "" : "lib";
-                    var suffixLib = IsPlatformWindows ? ".lib" : ".a";
-                    return $"{prefixLib}{Name}{suffixLib}";
 
                 default:
                     return Name;
@@ -154,10 +148,6 @@ namespace FuzzumBuildTool
                     flags.Add("-dynamiclib");
                     flags.Add("-fPIC");
                 }
-            }
-            else if (IsLib)
-            {
-                // Для статических библиотек не нужны специальные флаги линковки
             }
             else if (IsExe)
             {
