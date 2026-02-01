@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using FuzzumBuildTool;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -10,6 +11,8 @@ using Microsoft.CodeAnalysis.CSharp;
 class Program
 {
     static Dictionary<string, dynamic> loadedModules = new Dictionary<string, dynamic>();
+    static Dictionary<string, string> moduleFilePaths = new Dictionary<string, string>();
+    static string projectRootDir = "";
     static string c_vers = "c++20";
     static string bin_path_ninja = "Binaries";
     static string temp_path_ninja = "Temp";
@@ -36,6 +39,190 @@ class Program
         public bool IsPlatformWindows { get; set; }
         public bool IsPlatformLinux { get; set; }
         public bool IsPlatformMac { get; set; }
+    }
+
+
+
+
+
+    static class GlobExpander
+    {
+        public static List<string> ExpandGlobs(List<string> patterns, string baseDir)
+        {
+            var result = new List<string>();
+            foreach (var pattern in patterns)
+            {
+                Console.WriteLine($"  DEBUG GlobExpander: Expanding pattern '{pattern}' from base dir '{baseDir}'");
+                var expanded = ExpandGlob(pattern, baseDir);
+                Console.WriteLine($"  DEBUG GlobExpander: Found {expanded.Count} files");
+                result.AddRange(expanded);
+            }
+            return result;
+        }
+
+        public static List<string> ExpandGlob(string pattern, string baseDir)
+        {
+            var results = new List<string>();
+
+            if (string.IsNullOrEmpty(pattern))
+                return results;
+
+            try
+            {
+                Console.WriteLine($"    DEBUG: Processing pattern '{pattern}' with baseDir '{baseDir}'");
+
+                // Проверяем, является ли путь абсолютным
+                string fullPattern;
+                if (Path.IsPathRooted(pattern))
+                {
+                    fullPattern = pattern;
+                }
+                else
+                {
+                    fullPattern = Path.Combine(baseDir, pattern);
+                }
+
+                Console.WriteLine($"    DEBUG: Full pattern: '{fullPattern}'");
+
+                // Если это не glob-паттерн, просто возвращаем как есть
+                if (!fullPattern.Contains('*') && !fullPattern.Contains('?'))
+                {
+                    Console.WriteLine($"    DEBUG: Not a glob pattern, checking file existence");
+                    if (File.Exists(fullPattern) || Directory.Exists(fullPattern))
+                    {
+                        results.Add(pattern);
+                        Console.WriteLine($"    DEBUG: File/directory exists, adding '{pattern}'");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"    DEBUG: File/directory does not exist at '{fullPattern}'");
+                    }
+                    return results;
+                }
+
+                // Разделяем на директорию и маску
+                string searchDirectory;
+                string searchPattern;
+
+                if (fullPattern.Contains('*') || fullPattern.Contains('?'))
+                {
+                    // Находим последний слэш перед первым символом wildcard
+                    int lastSlashBeforeWildcard = -1;
+                    for (int i = 0; i < fullPattern.Length; i++)
+                    {
+                        if ((fullPattern[i] == '*' || fullPattern[i] == '?') && i > 0)
+                        {
+                            // Ищем последний слэш перед этой позицией
+                            for (int j = i - 1; j >= 0; j--)
+                            {
+                                if (fullPattern[j] == '\\' || fullPattern[j] == '/')
+                                {
+                                    lastSlashBeforeWildcard = j;
+                                    break;
+                                }
+                            }
+                            break;
+                        }
+                    }
+
+                    if (lastSlashBeforeWildcard >= 0)
+                    {
+                        searchDirectory = fullPattern.Substring(0, lastSlashBeforeWildcard);
+                        searchPattern = fullPattern.Substring(lastSlashBeforeWildcard + 1);
+                    }
+                    else
+                    {
+                        searchDirectory = Path.GetDirectoryName(fullPattern);
+                        if (string.IsNullOrEmpty(searchDirectory))
+                            searchDirectory = ".";
+                        searchPattern = Path.GetFileName(fullPattern);
+                    }
+                }
+                else
+                {
+                    searchDirectory = Path.GetDirectoryName(fullPattern);
+                    searchPattern = Path.GetFileName(fullPattern);
+                }
+
+                Console.WriteLine($"    DEBUG: Search directory: '{searchDirectory}'");
+                Console.WriteLine($"    DEBUG: Search pattern: '{searchPattern}'");
+
+                // Нормализуем путь
+                searchDirectory = Path.GetFullPath(searchDirectory);
+                Console.WriteLine($"    DEBUG: Normalized search directory: '{searchDirectory}'");
+
+                if (!Directory.Exists(searchDirectory))
+                {
+                    Console.WriteLine($"    DEBUG: Search directory does not exist!");
+                    return results;
+                }
+
+                // Обрабатываем рекурсивные шаблоны с **
+                if (searchPattern.Contains("**"))
+                {
+                    Console.WriteLine($"    DEBUG: Recursive pattern detected");
+                    // Получаем все файлы рекурсивно
+                    var allFiles = Directory.GetFiles(searchDirectory, "*", SearchOption.AllDirectories);
+                    Console.WriteLine($"    DEBUG: Found {allFiles.Length} total files recursively");
+
+                    foreach (var file in allFiles)
+                    {
+                        var fileName = Path.GetFileName(file);
+                        if (MatchesPattern(fileName, searchPattern))
+                        {
+                            results.Add(file);
+                            Console.WriteLine($"    DEBUG: Added '{file}'");
+                        }
+                    }
+                }
+                else
+                {
+                    // Не рекурсивный поиск
+                    Console.WriteLine($"    DEBUG: Non-recursive search");
+                    var files = Directory.GetFiles(searchDirectory, searchPattern, SearchOption.TopDirectoryOnly);
+                    Console.WriteLine($"    DEBUG: Found {files.Length} files matching pattern");
+
+                    foreach (var file in files)
+                    {
+                        results.Add(file);
+                        Console.WriteLine($"    DEBUG: Added '{file}'");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Warning: Failed to expand glob pattern '{pattern}': {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            }
+
+            Console.WriteLine($"    DEBUG: Total results: {results.Count}");
+            return results;
+        }
+
+        private static bool MatchesPattern(string fileName, string pattern)
+        {
+            if (pattern == "**")
+                return true;
+
+            if (pattern.StartsWith("**/"))
+            {
+                string subPattern = pattern.Substring(3);
+                return fileName.Contains(subPattern.Replace("*", ""));
+            }
+
+            if (pattern.EndsWith("/**"))
+            {
+                string subPattern = pattern.Substring(0, pattern.Length - 3);
+                return fileName.StartsWith(subPattern.Replace("*", ""));
+            }
+
+            if (pattern.EndsWith(".cpp") && pattern.Contains("**.cpp"))
+            {
+                // Преобразуем "**.cpp" → "**/*.cpp"
+                pattern = pattern.Replace("**.cpp", "**/*.cpp");
+            }
+            return true;
+        }
     }
 
     static dynamic CreateModule(Type moduleType, dynamic target)
@@ -91,7 +278,6 @@ class Program
         }
     }
 
-
     static List<string> GetAllDependencies(string moduleName, HashSet<string> visited = null)
     {
         if (visited == null) visited = new HashSet<string>();
@@ -126,6 +312,118 @@ class Program
         return allDeps.Distinct().ToList();
     }
 
+    static (List<string> publicIncludes, List<string> privateIncludes) GetAllIncludesForModule(
+        string moduleName,
+        dynamic target,
+        HashSet<string> visited = null)
+    {
+        if (visited == null) visited = new HashSet<string>();
+        if (visited.Contains(moduleName)) return (new List<string>(), new List<string>());
+        visited.Add(moduleName);
+
+        if (!loadedModules.TryGetValue(moduleName, out dynamic module))
+            return (new List<string>(), new List<string>());
+
+        var allPublicIncludes = new List<string>();
+        var allPrivateIncludes = new List<string>();
+
+        // Получаем базовую директорию модуля
+        string moduleBaseDir = moduleFilePaths.ContainsKey(moduleName)
+            ? moduleFilePaths[moduleName]
+            : Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+
+        string projectRoot = projectRootDir;
+
+        // Глобальные include-пути таргета
+        if (target.GlobalIncludePaths != null)
+        {
+            foreach (var include in target.GlobalIncludePaths)
+            {
+                if (include.Contains('*'))
+                {
+                    allPublicIncludes.AddRange(GlobExpander.ExpandGlob(include, projectRoot));
+                }
+                else
+                {
+                    allPublicIncludes.Add(include);
+                }
+            }
+        }
+
+        // Публичные include-пути текущего модуля
+        var modulePublicIncludes = module.PublicIncludePaths ?? new List<string>();
+        foreach (var include in modulePublicIncludes)
+        {
+            if (include.Contains('*'))
+            {
+                allPublicIncludes.AddRange(GlobExpander.ExpandGlob(include, moduleBaseDir));
+            }
+            else
+            {
+                allPublicIncludes.Add(include);
+            }
+        }
+
+        // Приватные include-пути текущего модуля
+        var modulePrivateIncludes = module.PrivateIncludePaths ?? new List<string>();
+        foreach (var include in modulePrivateIncludes)
+        {
+            if (include.Contains('*'))
+            {
+                allPrivateIncludes.AddRange(GlobExpander.ExpandGlob(include, moduleBaseDir));
+            }
+            else
+            {
+                allPrivateIncludes.Add(include);
+            }
+        }
+
+        // Рекурсивно собираем публичные include-пути из зависимостей
+        foreach (string dep in module.PublicDependencyModuleNames ?? new List<string>())
+        {
+            if (!visited.Contains(dep))
+            {
+                var result = GetAllIncludesForModule(dep, target, visited);
+                allPublicIncludes.AddRange(result.Item1); // Item1 = publicIncludes
+            }
+        }
+
+        // Для приватных зависимостей
+        foreach (string dep in module.PrivateDependencyModuleNames ?? new List<string>())
+        {
+            if (!visited.Contains(dep))
+            {
+                var result = GetAllIncludesForModule(dep, target, visited);
+                allPrivateIncludes.AddRange(result.Item1); // Item1 = publicIncludes
+                allPrivateIncludes.AddRange(result.Item2); // Item2 = privateIncludes
+            }
+        }
+
+        // Убираем дубликаты
+        allPublicIncludes = allPublicIncludes.Distinct().ToList();
+        allPrivateIncludes = allPrivateIncludes.Distinct().ToList();
+
+        return (allPublicIncludes, allPrivateIncludes);
+    }
+
+
+    static string EscapePathForNinja(string path)
+    {
+        if (string.IsNullOrEmpty(path))
+            return path;
+
+        path = path.Trim();
+        path = path.Trim('"');
+        path = path.Replace('\\', '/');
+        var invalidChars = new char[] { '\r', '\n', '\t', '\0', '\b', '\a', '\f', '\v' };
+        foreach (var ch in invalidChars)
+        {
+            path = path.Replace(ch.ToString(), "");
+        }
+
+        return path;
+    }
+
     static int Main(string[] args)
     {
         if (args.Length == 0)
@@ -157,6 +455,8 @@ class Program
 
         targetFile = Path.GetFullPath(targetFile);
         ninjaOutDir = Path.GetFullPath(ninjaOutDir);
+
+        projectRootDir = Path.GetDirectoryName(targetFile)!;
 
         Console.WriteLine($"Target: {targetName}");
         Console.WriteLine($"Target: {targetFile}");
@@ -283,6 +583,29 @@ class Program
             }
 
             loadedModules[module.Name] = module;
+
+            string expectedFileName1 = module.Name + ".Build.cs";
+            string expectedFileName2 = moduleType.Name.Replace("Module", "") + ".Build.cs";
+
+            bool found = false;
+            foreach (var buildFile in allBuildFiles)
+            {
+                string fileName = Path.GetFileName(buildFile);
+                if (fileName.Equals(expectedFileName1, StringComparison.OrdinalIgnoreCase) ||
+                    fileName.Equals(expectedFileName2, StringComparison.OrdinalIgnoreCase))
+                {
+                    Program.moduleFilePaths[module.Name] = Path.GetDirectoryName(buildFile);
+                    Console.WriteLine($"  Found module '{module.Name}' at: {Program.moduleFilePaths[module.Name]}");
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
+            {
+                Program.moduleFilePaths[module.Name] = engineSourceDir;
+                Console.WriteLine($"  Warning: Using project root for module '{module.Name}'");
+            }
         }
 
         Console.WriteLine($"\nProcessing modules for target {targetName}:");
@@ -340,7 +663,7 @@ class Program
             if (deps.Count > 0)
                 Console.WriteLine($"    Dependencies: {string.Join(", ", deps)}");
 
-            // Include paths
+            // Include пути
             var includes = new List<string>();
             includes.AddRange(module.PublicIncludePaths ?? new List<string>());
             includes.AddRange(module.PrivateIncludePaths ?? new List<string>());
@@ -369,13 +692,24 @@ class Program
         return 0;
     }
 
+    static string MakeRelativePath(string absolutePath, string rootDir)
+    {
+        if (!Path.IsPathRooted(absolutePath))
+            return absolutePath.Replace('\\', '/');
+
+        var absUri = new Uri(absolutePath + (Directory.Exists(absolutePath) ? "/" : ""));
+        var rootUri = new Uri(rootDir + "/");
+        var relUri = rootUri.MakeRelativeUri(absUri);
+        return Uri.UnescapeDataString(relUri.ToString()).Replace('\\', '/');
+    }
+
     static void GenerateNinjaFile(dynamic target, string ninjaOutDir, string targetName)
     {
         string ninjaPath = Path.Combine(ninjaOutDir, $"{targetName}.ninja");
         Directory.CreateDirectory(Path.Combine(ninjaOutDir, bin_path_ninja));
         Directory.CreateDirectory(Path.Combine(ninjaOutDir, temp_path_ninja));
 
-        using var writer = new StreamWriter(ninjaPath);
+        using var writer = new StreamWriter(ninjaPath, false, new UTF8Encoding(false));
 
         bool isWindows = target.IsPlatformWindows;
         bool isLinux = target.IsPlatformLinux;
@@ -395,7 +729,7 @@ class Program
         writer.WriteLine("ar = ar");
 
         // Базовые флаги
-        writer.Write("cflags_base = -std=" + c_vers + " -Wall -Wextra -Werror");
+        writer.Write("cflags_base = -std=" + c_vers + " -Wall -Wextra "); /*-Werror*/
         if (!isWindows) writer.Write(" -fPIC");
         writer.WriteLine();
 
@@ -464,14 +798,49 @@ class Program
         writer.WriteLine();
 
 
-
-        // Инициализируем includes
         writer.WriteLine($"includes =");
 
         // Добавляем глобальные includes
         foreach (var include in target.GlobalIncludePaths ?? new List<string>())
         {
-            writer.WriteLine($"includes = $includes -I\"{include}\"");
+            if (string.IsNullOrWhiteSpace(include))
+                continue;
+
+            // Если путь уже абсолютный, оставляем как есть
+            string absInclude;
+            if (Path.IsPathRooted(include))
+            {
+                absInclude = include;
+            }
+            else
+            {
+                // Иначе добавляем корневую директорию проекта
+                absInclude = Path.GetFullPath(Path.Combine(projectRootDir, include));
+            }
+
+            // Создаем относительный путь от ninjaOutDir
+            string relativeInclude;
+            try
+            {
+                relativeInclude = Path.GetRelativePath(ninjaOutDir, absInclude);
+            }
+            catch
+            {
+                // Если не получается создать относительный путь, используем абсолютный
+                relativeInclude = absInclude;
+            }
+
+            string ninjaIncludePath = EscapePathForNinja(relativeInclude);
+
+            ninjaIncludePath = ninjaIncludePath.Replace("\\.\\", "/");
+            ninjaIncludePath = ninjaIncludePath.Replace("\\./", "/");
+            ninjaIncludePath = ninjaIncludePath.Trim('.', '/', '\\');
+
+            if (!string.IsNullOrWhiteSpace(ninjaIncludePath))
+            {
+                ninjaIncludePath = ninjaIncludePath.Replace("\"", "\\\"");
+                writer.WriteLine($"includes = $includes -I\"{ninjaIncludePath}\"");
+            }
         }
 
         writer.WriteLine();
@@ -504,24 +873,25 @@ class Program
         foreach (string moduleName in allModulesForNinja)
         {
             if (!loadedModules.TryGetValue(moduleName, out dynamic module))
-            {
-                Console.WriteLine($"  WARNING: Skipping module '{moduleName}' in ninja generation");
                 continue;
-            }
 
-            // Собираем include пути
-            var includes = new List<string>();
-            includes.AddRange(module.PublicIncludePaths ?? new List<string>());
-            includes.AddRange(module.PrivateIncludePaths ?? new List<string>());
-            moduleIncludes[moduleName] = includes;
+            // Получаем все include-пути для этого модуля
+            var includesResult = GetAllIncludesForModule(moduleName, target);
+            var publicIncludes = includesResult.Item1;
+            var privateIncludes = includesResult.Item2;
 
-            // Собираем библиотеки
+            // Объединяем публичные и приватные
+            var allIncludes = new List<string>();
+            allIncludes.AddRange(publicIncludes);
+            allIncludes.AddRange(privateIncludes);
+
+            moduleIncludes[moduleName] = allIncludes;
+
             var libs = new List<string>();
             libs.AddRange(module.PublicAdditionalLibraries ?? new List<string>());
             libs.AddRange(module.PrivateAdditionalLibraries ?? new List<string>());
             moduleLibraries[moduleName] = libs;
 
-            // Собираем макросес
             var defines = new List<string>();
             defines.AddRange(module.PublicDefinitions ?? new List<string>());
             defines.AddRange(module.PrivateDefinitions ?? new List<string>());
@@ -535,39 +905,160 @@ class Program
             if (!loadedModules.TryGetValue(moduleName, out dynamic module))
                 continue;
 
+            // Получаем все include-пути для этого модуля
+            var includesResult = GetAllIncludesForModule(moduleName, target);
+            var publicIncludes = includesResult.Item1; // Item1 = publicIncludes
+            var privateIncludes = includesResult.Item2; // Item2 = privateIncludes
+
             var moduleObjs = new List<string>();
             var allSources = new List<string>();
-            allSources.AddRange(module.PublicSourceFiles ?? new List<string>());
-            allSources.AddRange(module.PrivateSourceFiles ?? new List<string>());
+
+            // string engineSourceDir = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+            Console.WriteLine($"\n  Processing module: {moduleName}");
+
+            string moduleBaseDir = moduleFilePaths.ContainsKey(moduleName)
+    ? moduleFilePaths[moduleName]
+    : projectRootDir;
+
+            Console.WriteLine($"  Module base directory: {moduleBaseDir}");
+
+            var publicSources = module.PublicSourceFiles ?? new List<string>();
+            var privateSources = module.PrivateSourceFiles ?? new List<string>();
+
+            string privateDir = Path.Combine(moduleBaseDir, "Private");
+            Console.WriteLine($"  Private directory: {privateDir}");
+            Console.WriteLine($"  Private directory exists: {Directory.Exists(privateDir)}");
+
+            if (Directory.Exists(privateDir))
+            {
+                var cppFiles = Directory.GetFiles(privateDir, "*.cpp", SearchOption.AllDirectories);
+                Console.WriteLine($"  Found {cppFiles.Length} .cpp files in Private directory:");
+                foreach (var file in cppFiles)
+                {
+                    Console.WriteLine($"    - {file}");
+                }
+            }
+
+            foreach (var source in publicSources)
+            {
+                if (source.Contains('*')) 
+                {
+                    // var expandedFiles = GlobExpander.ExpandGlob(source, engineSourceDir);
+                    var expandedFiles = GlobExpander.ExpandGlob(source, moduleBaseDir);
+                    foreach (var expandedFile in expandedFiles)
+                    {
+                        bool isSource = expandedFile.EndsWith(".cpp", StringComparison.OrdinalIgnoreCase) ||
+                                       expandedFile.EndsWith(".c", StringComparison.OrdinalIgnoreCase) ||
+                                       expandedFile.EndsWith(".cc", StringComparison.OrdinalIgnoreCase);
+
+                        if (isSource)
+                        {
+                            allSources.Add(expandedFile);
+                        }
+                    }
+                }
+                else 
+                {
+                    bool isSource = source.EndsWith(".cpp", StringComparison.OrdinalIgnoreCase) ||
+                                   source.EndsWith(".c", StringComparison.OrdinalIgnoreCase) ||
+                                   source.EndsWith(".cc", StringComparison.OrdinalIgnoreCase);
+
+                    if (isSource)
+                    {
+                        allSources.Add(source);
+                    }
+                }
+            }
+
+            // Обрабатываем приватные исходные файлы с glob-паттернами
+            foreach (var source in privateSources)
+            {
+                if (source.Contains('*')) 
+                {
+                    //   var expandedFiles = GlobExpander.ExpandGlob(source, engineSourceDir);
+                    var expandedFiles = GlobExpander.ExpandGlob(source, moduleBaseDir);
+                    foreach (var expandedFile in expandedFiles)
+                    {
+                        bool isSource = expandedFile.EndsWith(".cpp", StringComparison.OrdinalIgnoreCase) ||
+                                       expandedFile.EndsWith(".c", StringComparison.OrdinalIgnoreCase) ||
+                                       expandedFile.EndsWith(".cc", StringComparison.OrdinalIgnoreCase);
+
+                        if (isSource)
+                        {
+                            allSources.Add(expandedFile);
+                        }
+                    }
+                }
+                else 
+                {
+                    bool isSource = source.EndsWith(".cpp", StringComparison.OrdinalIgnoreCase) ||
+                                   source.EndsWith(".c", StringComparison.OrdinalIgnoreCase) ||
+                                   source.EndsWith(".cc", StringComparison.OrdinalIgnoreCase);
+
+                    if (isSource)
+                    {
+                        allSources.Add(source);
+                    }
+                }
+            }
             if (allSources.Count == 0 && module.SourceFiles != null)
-                allSources.AddRange(module.SourceFiles);
+            {
+                foreach (var source in module.SourceFiles)
+                {
+                    if (source.Contains('*')) 
+                    {
+                        // var expandedFiles = GlobExpander.ExpandGlob(source, engineSourceDir);
+                        var expandedFiles = GlobExpander.ExpandGlob(source, moduleBaseDir);
+                        foreach (var expandedFile in expandedFiles)
+                        {
+                            bool isSource = expandedFile.EndsWith(".cpp", StringComparison.OrdinalIgnoreCase) ||
+                                           expandedFile.EndsWith(".c", StringComparison.OrdinalIgnoreCase) ||
+                                           expandedFile.EndsWith(".cc", StringComparison.OrdinalIgnoreCase);
+
+                            if (isSource)
+                            {
+                                allSources.Add(expandedFile);
+                            }
+                        }
+                    }
+                    else 
+                    {
+                        bool isSource = source.EndsWith(".cpp", StringComparison.OrdinalIgnoreCase) ||
+                                       source.EndsWith(".c", StringComparison.OrdinalIgnoreCase) ||
+                                       source.EndsWith(".cc", StringComparison.OrdinalIgnoreCase);
+
+                        if (isSource)
+                        {
+                            allSources.Add(source);
+                        }
+                    }
+                }
+            }
 
             foreach (var sourceFile in allSources)
             {
                 if (string.IsNullOrEmpty(sourceFile))
                     continue;
 
-                // Определяем тип файла
-                bool isSource = sourceFile.EndsWith(".cpp", StringComparison.OrdinalIgnoreCase) ||
-                               sourceFile.EndsWith(".c", StringComparison.OrdinalIgnoreCase) ||
-                               sourceFile.EndsWith(".cc", StringComparison.OrdinalIgnoreCase);
+                string absSourcePath = sourceFile;
 
-                if (!isSource) continue; // Пропускаем заголовочные файлы
+                if (!File.Exists(absSourcePath))
+                {
+                    Console.WriteLine($"  ERROR: Source file not found: {absSourcePath}");
+                    continue;
+                }
 
-                // Объектный файл с уникальным именем (включая путь к модулю)
                 var safeModuleName = moduleName.Replace('/', '_').Replace('\\', '_').Replace(':', '_');
-                var safeFileName = Path.GetFileNameWithoutExtension(sourceFile)
+                var safeFileName = Path.GetFileNameWithoutExtension(absSourcePath)
                     .Replace('/', '_').Replace('\\', '_').Replace(':', '_');
-
-                // Добавляем хеш пути для уникальности
-                var sourceHash = Math.Abs(sourceFile.GetHashCode()).ToString("X8");
+                var sourceHash = Math.Abs(absSourcePath.GetHashCode()).ToString("X8");
                 var objName = $"{safeModuleName}_{safeFileName}_{sourceHash}.o";
-                var objPath = $"{temp_path_ninja}/{objName}";
+                var objPath = $"{temp_path_ninja}/{objName}".Trim();
                 moduleObjs.Add(objPath);
 
-                Console.WriteLine($"  - {moduleName}: {sourceFile} -> {objPath}");
+                Console.WriteLine($"  - {moduleName}: {Path.GetFileName(absSourcePath)} -> {objPath}");
 
-                // Собираем все include пути для этого файла
+                // Собираем все include пути
                 var allIncludes = new List<string>();
 
                 // Include paths этого модуля
@@ -634,7 +1125,29 @@ class Program
                 }
 
                 // Правило компиляции
-                writer.WriteLine($"build {objPath}: cxx {sourceFile}");
+                string absoluteSourcePath;
+                if (Path.IsPathRooted(sourceFile))
+                {
+                    absoluteSourcePath = sourceFile;
+                }
+                else
+                {
+                    absoluteSourcePath = Path.Combine(moduleBaseDir, sourceFile);
+                }
+
+
+                string relativeSourcePath = Path.GetRelativePath(ninjaOutDir, absSourcePath);
+                string ninjaSourcePath = EscapePathForNinja(relativeSourcePath);
+
+                string cleanObjPath = objPath.Trim();
+                // string cleanSourcePath = ninjaSourcePath.Trim();
+                // string cleanSourcePath = EscapePathForNinja(relativeSourcePath).Trim();
+
+                string cleanSourcePath = ninjaSourcePath.Trim();
+
+                writer.WriteLine($"build {cleanObjPath}: cxx {cleanSourcePath}");
+
+                Console.WriteLine($"  DEBUG: cleanSourcePath = '{cleanSourcePath}'");
 
                 // Добавляем include пути
                 if (allIncludes.Count > 0)
@@ -642,7 +1155,49 @@ class Program
                     writer.Write("  includes =");
                     foreach (var inc in allIncludes.Distinct())
                     {
-                        writer.Write($" -I\"{inc}\"");
+                        string absInc;
+                        if (Path.IsPathRooted(inc))
+                        {
+                            absInc = inc;
+                        }
+                        else
+                        {
+                            // Преобразуем относительный путь в абсолютный
+                            if (inc.StartsWith("Public") || inc.StartsWith("Private"))
+                            {
+                                absInc = Path.Combine(moduleBaseDir, inc);
+                            }
+                            else
+                            {
+                                absInc = Path.Combine(projectRootDir, inc);
+                            }
+                        }
+
+                        // Нормализуем для ninja - используем относительный путь от ninjaOutDir
+                        string relativeInc = Path.GetRelativePath(ninjaOutDir, absInc);
+
+                        Console.WriteLine($"  DEBUG: absInc = '{absInc}'");
+                        Console.WriteLine($"  DEBUG: ninjaOutDir = '{ninjaOutDir}'");
+                        Console.WriteLine($"  DEBUG: relativeInc = '{relativeInc}'");
+
+                        string ninjaIncPath = EscapePathForNinja(relativeInc);
+                        Console.WriteLine($"  DEBUG: ninjaIncPath = '{ninjaIncPath}'");
+
+                        if (ninjaIncPath.StartsWith(".."))
+                        {
+                            // Оставляем как есть
+                        }
+                        else
+                        {
+                            ninjaIncPath = ninjaIncPath.Replace("\\", "/");
+                        }
+
+                        if (!string.IsNullOrEmpty(ninjaIncPath))
+                        {
+                            ninjaIncPath = ninjaIncPath.Trim('\"').TrimEnd('/');
+                            ninjaIncPath = ninjaIncPath.Replace("\"", "\\\"");
+                            writer.Write($" -I\"{ninjaIncPath}\"");
+                        }
                     }
                     writer.WriteLine();
                 }
@@ -679,45 +1234,27 @@ class Program
         foreach (string moduleName in allModulesForNinja)
         {
             if (!loadedModules.TryGetValue(moduleName, out dynamic module))
-            {
-                Console.WriteLine("\nWarning! Skipping line 678");
                 continue;
-            }
-
 
             // Пропускаем модули без объектных файлов
             if (!moduleObjectFiles.ContainsKey(moduleName) || moduleObjectFiles[moduleName].Count == 0)
-            {
-                Console.WriteLine("\nWarning! Skipping line 686. No obj files!");
                 continue;
-            }
-
 
             string ruleType = "link_dll";
             string outputFileName = moduleName;
 
+            // Определяем тип сборки
             try
             {
                 var buildType = module.BuildType;
-
                 if (buildType != null)
                 {
                     string buildTypeStr = buildType.ToString();
-                    Console.WriteLine($"  DEBUG: {moduleName} BuildType = '{buildTypeStr}'");
-
                     if (buildTypeStr.IndexOf("executable", StringComparison.OrdinalIgnoreCase) >= 0 ||
                         buildTypeStr.IndexOf("exe", StringComparison.OrdinalIgnoreCase) >= 0)
                     {
                         ruleType = "link_exe";
-                        if (moduleName == "Engine")
-                        {
-                            outputFileName = isWindows ? "Engine.exe" : "Engine";
-                        }
-                        else
-                        {
-                            outputFileName = isWindows ? $"{moduleName}.exe" : moduleName;
-                        }
-                        Console.WriteLine($"  -> Determined as EXE");
+                        outputFileName = isWindows ? $"{moduleName}.exe" : moduleName;
                     }
                     else if (buildTypeStr.IndexOf("dynamic", StringComparison.OrdinalIgnoreCase) >= 0 ||
                              buildTypeStr.IndexOf("dll", StringComparison.OrdinalIgnoreCase) >= 0)
@@ -726,46 +1263,22 @@ class Program
                         outputFileName = isWindows ? $"{moduleName}.dll" :
                                         isLinux ? $"lib{moduleName}.so" :
                                         $"lib{moduleName}.dylib";
-                        Console.WriteLine($"  -> Determined as DLL");
                     }
                     else if (buildTypeStr.IndexOf("static", StringComparison.OrdinalIgnoreCase) >= 0 ||
                              buildTypeStr.IndexOf("lib", StringComparison.OrdinalIgnoreCase) >= 0)
                     {
                         ruleType = "link_lib";
                         outputFileName = isWindows ? $"{moduleName}.lib" : $"lib{moduleName}.a";
-                        Console.WriteLine($"  -> Determined as LIB");
-                    }
-                }
-                else
-                {
-                    // Fallback: если BuildType не установлен
-                    Console.WriteLine($"  WARNING: BuildType is null for {moduleName}");
-                    if (moduleName == "Engine" && target.Type.ToString() == "Program")
-                    {
-                        ruleType = "link_exe";
-                        outputFileName = isWindows ? "Engine.exe" : "Engine";
-                        Console.WriteLine($"  -> Determined as EXE (fallback for Engine)");
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"  ERROR getting BuildType for {moduleName}: {ex.Message}");
-
-                if (moduleName == "Engine" && target.Type.ToString() == "Program")
-                {
-                    ruleType = "link_exe";
-                    outputFileName = isWindows ? "Engine.exe" : "Engine";
-                    Console.WriteLine($"  -> Determined as EXE (error fallback)");
-                }
-            }
+            catch { }
 
             var outputPath = $"{bin_path_ninja}/{outputFileName}";
 
-            // Проверяем уникальность имени выходного файла
+            // Проверяем уникальность имени
             if (outputFiles.Contains(outputPath))
             {
-                // Если имя уже используется, добавляем суффикс с именем модуля
                 var ext = Path.GetExtension(outputFileName);
                 var nameWithoutExt = Path.GetFileNameWithoutExtension(outputFileName);
                 outputFileName = $"{nameWithoutExt}_{moduleName}{ext}";
@@ -775,46 +1288,50 @@ class Program
 
             Console.WriteLine($"  - {moduleName} -> {outputPath} ({ruleType})");
 
-            writer.Write($"build {outputPath}: {ruleType}");
+            var allLinkObjs = new List<string>();
 
-            // Добавляем объектные файлы этого модуля
-            foreach (var objFile in moduleObjectFiles[moduleName])
+            if (ruleType == "link_exe")
+            {
+                // Для исполняемого файла добавляем все объектные файлы этого модуля и его зависимостей
+                allLinkObjs.AddRange(moduleObjectFiles[moduleName]);
+
+                // Добавляем объекты всех зависимостей
+                var allDeps = GetAllDependencies(moduleName);
+                foreach (var dep in allDeps)
+                {
+                    if (moduleObjectFiles.TryGetValue(dep, out var depObjs))
+                    {
+                        allLinkObjs.AddRange(depObjs);
+                    }
+                }
+
+                // Убираем дубликаты
+                allLinkObjs = allLinkObjs.Distinct().ToList();
+                Console.WriteLine($"    Will link with {allLinkObjs.Count} object files (including dependencies)");
+            }
+            else
+            {
+                // Для DLL/LIB используем только свои объекты
+                allLinkObjs.AddRange(moduleObjectFiles[moduleName]);
+            }
+
+            // Правило линковки
+            writer.Write($"build {outputPath}: {ruleType}");
+            foreach (var objFile in allLinkObjs)
             {
                 writer.Write($" {objFile}");
             }
 
-            // Получаем зависимости модуля
-            var allDeps = new List<string>();
-            try
-            {
-                var moduleType = module.GetType();
-                var publicDepsProp = moduleType.GetProperty("PublicDependencyModuleNames");
-                var privateDepsProp = moduleType.GetProperty("PrivateDependencyModuleNames");
-
-                if (publicDepsProp != null)
-                {
-                    var deps = publicDepsProp.GetValue(module) as List<string>;
-                    if (deps != null) allDeps.AddRange(deps);
-                }
-
-                if (privateDepsProp != null)
-                {
-                    var deps = privateDepsProp.GetValue(module) as List<string>;
-                    if (deps != null) allDeps.AddRange(deps);
-                }
-            }
-            catch
-            {
-                // Fallback через dynamic
-                if (module.PublicDependencyModuleNames != null)
-                    allDeps.AddRange(module.PublicDependencyModuleNames);
-                if (module.PrivateDependencyModuleNames != null)
-                    allDeps.AddRange(module.PrivateDependencyModuleNames);
-            }
+            // Получаем зависимости для импортных библиотек
+            var allDepsForLibs = new List<string>();
+            if (module.PublicDependencyModuleNames != null)
+                allDepsForLibs.AddRange(module.PublicDependencyModuleNames);
+            if (module.PrivateDependencyModuleNames != null)
+                allDepsForLibs.AddRange(module.PrivateDependencyModuleNames);
 
             // Добавляем зависимости сборки
             var depOutputs = new List<string>();
-            foreach (var dep in allDeps)
+            foreach (var dep in allDepsForLibs)
             {
                 if (moduleOutputs.ContainsKey(dep))
                 {
@@ -833,112 +1350,53 @@ class Program
 
             writer.WriteLine();
 
-            // Собираем все библиотеки для этого модуля
+            // Библиотеки для линковки
             var allModuleLibs = new List<string>();
 
-            try
-            {
-                var moduleType = module.GetType();
-                var publicLibsProp = moduleType.GetProperty("PublicAdditionalLibraries");
-                var privateLibsProp = moduleType.GetProperty("PrivateAdditionalLibraries");
+            // Библиотеки самого модуля
+            if (module.PublicAdditionalLibraries != null)
+                allModuleLibs.AddRange(module.PublicAdditionalLibraries);
+            if (module.PrivateAdditionalLibraries != null)
+                allModuleLibs.AddRange(module.PrivateAdditionalLibraries);
 
-                if (publicLibsProp != null)
-                {
-                    var libs = publicLibsProp.GetValue(module) as List<string>;
-                    if (libs != null) allModuleLibs.AddRange(libs);
-                }
+            // Системные библиотеки
+            if (module.PublicSystemLibraries != null)
+                allModuleLibs.AddRange(module.PublicSystemLibraries);
 
-                if (privateLibsProp != null)
-                {
-                    var libs = privateLibsProp.GetValue(module) as List<string>;
-                    if (libs != null) allModuleLibs.AddRange(libs);
-                }
-            }
-            catch
-            {
-                // Пробуем через dynamic как fallback
-                if (module.PublicAdditionalLibraries != null)
-                    allModuleLibs.AddRange(module.PublicAdditionalLibraries);
-                if (module.PrivateAdditionalLibraries != null)
-                    allModuleLibs.AddRange(module.PrivateAdditionalLibraries);
-            }
-
-            // Библиотеки из зависимостей (через уже собранные данные)
-            foreach (var dep in allDeps)
-            {
-                if (moduleLibraries.TryGetValue(dep, out var depLibs))
-                {
-                    foreach (var lib in depLibs)
-                    {
-                        if (!string.IsNullOrEmpty(lib))
-                            allModuleLibs.Add(lib);
-                    }
-                }
-            }
-
-            // Добавляем системные библиотеки
-            try
-            {
-                var moduleType = module.GetType();
-                var sysLibsProp = moduleType.GetProperty("PublicSystemLibraries");
-                if (sysLibsProp != null)
-                {
-                    var sysLibs = sysLibsProp.GetValue(module) as List<string>;
-                    if (sysLibs != null)
-                    {
-                        foreach (var sysLib in sysLibs)
-                        {
-                            if (!string.IsNullOrEmpty(sysLib))
-                                allModuleLibs.Add(sysLib);
-                        }
-                    }
-                }
-            }
-            catch
-            {
-                // Fallback
-                if (module.PublicSystemLibraries != null)
-                {
-                    foreach (var sysLib in module.PublicSystemLibraries)
-                    {
-                        if (!string.IsNullOrEmpty(sysLib))
-                            allModuleLibs.Add(sysLib);
-                    }
-                }
-            }
-
-            // Глобальные библиотеки таргета
+            // Глобальные библиотеки
             if (target.GlobalLibraries != null)
-            {
-                foreach (var lib in target.GlobalLibraries)
-                {
-                    if (!string.IsNullOrEmpty(lib))
-                        allModuleLibs.Add(lib);
-                }
-            }
+                allModuleLibs.AddRange(target.GlobalLibraries);
 
-            // Добавляем библиотеки
-            if (allModuleLibs.Count > 0 || allDeps.Count > 0)
+            // Для Windows исполняемых файлов добавляем импортные библиотеки зависимостей
+            if (isWindows && ruleType == "link_exe")
             {
-                writer.Write("  libs =");
-
-                // Для Windows: добавляем импортные библиотеки зависимостей
-                if (isWindows)
+                foreach (var dep in allDepsForLibs)
                 {
-                    foreach (var dep in allDeps)
+                    if (moduleOutputs.ContainsKey(dep))
                     {
-                        if (moduleOutputs.ContainsKey(dep))
+                        var depPath = moduleOutputs[dep];
+                        if (depPath.EndsWith(".lib"))
                         {
-                            var depPath = moduleOutputs[dep];
-                            if (depPath.EndsWith(".lib"))
+                            // Добавляем .lib файл зависимости
+                            allModuleLibs.Add(depPath);
+                        }
+                        else if (depPath.EndsWith(".dll"))
+                        {
+                            // Для DLL генерируем имя .lib файла
+                            var libName = depPath.Replace(".dll", ".lib");
+                            if (File.Exists(Path.Combine(ninjaOutDir, libName)))
                             {
-                                writer.Write($" \"{depPath}\"");
+                                allModuleLibs.Add(libName);
                             }
                         }
                     }
                 }
+            }
 
-                // Добавляем библиотеки самого модуля
+            // Добавляем библиотеки
+            if (allModuleLibs.Count > 0)
+            {
+                writer.Write("  libs =");
                 foreach (var lib in allModuleLibs.Distinct())
                 {
                     if (isWindows && (lib.EndsWith(".lib") || lib.Contains(".lib")))
@@ -961,30 +1419,11 @@ class Program
             writer.WriteLine();
         }
 
-        string mainOutput = "";
-
-        if (moduleOutputs.Count > 0)
-        {
-            // Создаем target "all", который зависит от всех выходных файлов
-            writer.Write($"build all: phony");
-            foreach (var output in moduleOutputs.Values)
-            {
-                writer.Write($" {output}");
-            }
-            writer.WriteLine();
-
-            // Делаем "all" default target
-            writer.WriteLine($"default all");
-
-            Console.WriteLine($"  Main output: {mainOutput}");
-            Console.WriteLine($"  All targets will be built");
-        }
-
         Console.WriteLine($"\n✅ Generated: {ninjaPath}");
         Console.WriteLine($"   Modules: {moduleOutputs.Count}");
         int totalObjects = moduleObjectFiles.Sum(m => m.Value?.Count ?? 0);
         Console.WriteLine($"   Object files: {totalObjects}");
-        Console.WriteLine($"   Main output: {mainOutput}");
+     //   Console.WriteLine($"   Main output: {mainOutput}");
         Console.WriteLine($"   Compiler: Clang++");
         Console.WriteLine($"   Use: ninja -f \"{Path.GetFileName(ninjaPath)}\"");
     }

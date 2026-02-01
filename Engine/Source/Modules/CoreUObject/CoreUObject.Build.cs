@@ -12,21 +12,21 @@ namespace FuzzumBuildTool
             // Зависит от Core
             PublicDependencyModuleNames.Add("Core");
             
-            // Исходники
+            // ТОЛЬКО UObject
             PrivateSourceFiles = new List<string>
             {
-                "Engine/Source/Modules/CoreUObject/Private/UObject.cpp"
+                "Private/**/*.cpp"
             };
             
             // Include пути
             PublicIncludePaths = new List<string>
             {
-                "Engine/Source/Modules/CoreUObject/Public"
+                "Public"
             };
-            
+
             PrivateIncludePaths = new List<string>
             {
-                "Engine/Source/Modules/CoreUObject/Private"
+                "Private"
             };
             
             // Дефайны

@@ -26,7 +26,7 @@ namespace FuzzumBuildTool
             
             GlobalIncludePaths = new List<string>
             {
-                "Engine/Source/Modules"
+                "Modules"
             };
         }
     }

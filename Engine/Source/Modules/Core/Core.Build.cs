@@ -28,23 +28,23 @@ namespace FuzzumBuildTool
             // Исходники
             PublicSourceFiles = new List<string>
             {
-                "Engine/Source/Modules/Core/Public/CoreTypes.h"
+                
             };
             
             PrivateSourceFiles = new List<string>
             {
-                "Engine/Source/Modules/Core/Private/Logging.cpp"
+                "Private/**/*.cpp"
             };
             
             // Include пути
             PublicIncludePaths = new List<string>
-            {};
+            {"Public"};
             
             PrivateIncludePaths = new List<string>
-            {};
+            {"Private"};
             
             // Дефайны
-            PublicDefinitions.Add("CORE_API=__declspec(dllexport)");
+            PublicDefinitions.Add("CORE_EXPORTS=1");
         }
     }
 }
