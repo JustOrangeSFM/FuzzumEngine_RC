@@ -2,11 +2,7 @@
 #include <memory>
 #include <chrono>
 #include <thread>
-
-// Подключаем заголовки Core
 #include "Core/Public/ModuleManager.h"
-
-// Подключаем CoreUObject
 #include "CoreUObject/Public/CoreUObject.h"
 
 using namespace std;
