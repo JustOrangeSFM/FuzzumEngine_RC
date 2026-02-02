@@ -18,10 +18,10 @@ Official binaries for the Fuzzum Engine can be found in Releases.
 
 ### Compiling from source
 
-1 Compile BuildTool(Run "./Engine/Source/Programs/FuzzumBuildTool/FuzzumBuildTool.sln" and compile)
-2 Run "./Engine/Build.bat" to generate ninja build script
-3 Run "./Build.bat" to compile engine
-4 Launch Engine "./Engine/Binaries/Engine.exe"
+1) Compile BuildTool(Run "./Engine/Source/Programs/FuzzumBuildTool/FuzzumBuildTool.sln" and compile)
+2) Run "./Engine/Build.bat" to generate ninja build script
+3) Run "./Build.bat" to compile engine
+4) Launch Engine "./Engine/Binaries/Engine.exe"
 
 ## Documentation and demos
 
