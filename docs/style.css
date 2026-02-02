@@ -144,11 +144,11 @@ body {
   transition: color 0.3s;
 }
 
-.logo-icon {
+/*.logo-icon {
   color: var(--accent-current);
   font-size: 1.5rem;
   transition: color 0.3s;
-}
+}*/
 
 .nav {
   display: flex;
@@ -508,4 +508,33 @@ body {
   font-size: 0.75rem;
   opacity: 0.7;
   z-index: 1000;
+}
+
+
+/* Стили для логотипа - ОДИН блок */
+.logo-image {
+    height: 50px; /* Настройте под нужный размер */
+    width: auto;
+    display: block;
+    transition: all 0.3s ease;
+}
+
+/* Эффекты при наведении */
+.logo:hover .logo-image {
+    transform: scale(1.05);
+    opacity: 0.9;
+}
+
+/* Для адаптивности на мобильных */
+@media (max-width: 768px) {
+    .logo-image {
+        height: 40px;
+    }
+}
+
+/* Для очень маленьких экранов */
+@media (max-width: 480px) {
+    .logo-image {
+        height: 35px;
+    }
 }
