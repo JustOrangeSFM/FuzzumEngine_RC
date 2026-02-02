@@ -1,5 +1,5 @@
 # Fuzzum Engine
-![logo](./FuzzumEngineLogo.jpg)
+![splash](./FuzzumEngineSplash.png)
 ## 2D and 3D cross-platform game engine
 
 **Fuzzum Engine is a cross-platform
@@ -11,6 +11,7 @@ Games can be exported with one click to a number of platforms, including the maj
 Fuzzum Engine is completely free and open source under the MIT license
 
 ## Getting the engine
+![logo](./FuzzumEngineLogo.png)
 
 ### Binary downloads
 
