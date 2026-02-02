@@ -1,5 +1,5 @@
 # Fuzzum Engine
-![splash](./FuzzumEngineSplash)
+![splash](./FuzzumEngineSplash.png)
 ## 2D and 3D cross-platform game engine
 
 **Fuzzum Engine is a cross-platform
