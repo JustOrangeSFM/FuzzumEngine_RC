@@ -21,4 +21,4 @@ int main() {
 return engine.run();
 }
 \`\`\`
-- [Back](./../index.md)
+- [Back](./index.md)
