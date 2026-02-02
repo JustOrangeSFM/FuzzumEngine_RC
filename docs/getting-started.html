@@ -4,23 +4,131 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Getting Started — GraphicsFuzzumEngine</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="style.css">
+  <script>
+    // Set dark theme by default
+    document.addEventListener('DOMContentLoaded', function() {
+      // Check for saved theme preference or default to dark
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      document.body.classList.add(savedTheme + '-theme');
+      
+      // Update theme toggle icon
+      updateThemeIcon(savedTheme);
+    });
+    
+    function toggleTheme() {
+      const body = document.body;
+      const isDark = body.classList.contains('dark-theme');
+      
+      if (isDark) {
+        body.classList.remove('dark-theme');
+        body.classList.add('light-theme');
+        localStorage.setItem('theme', 'light');
+        updateThemeIcon('light');
+      } else {
+        body.classList.remove('light-theme');
+        body.classList.add('dark-theme');
+        localStorage.setItem('theme', 'dark');
+        updateThemeIcon('dark');
+      }
+    }
+    
+    function updateThemeIcon(theme) {
+      const themeToggle = document.querySelector('.theme-toggle i');
+      if (themeToggle) {
+        themeToggle.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+      }
+    }
+  </script>
 </head>
-<body>
-  <header>
-    <h1>GraphicsFuzzumEngine Documentation</h1>
+<body class="dark-theme">
+  <!-- Header -->
+  <header class="header">
+    <div class="header-content">
+      <a href="index.html" class="logo">
+        <i class="fas fa-cube logo-icon"></i>
+        GraphicsFuzzumEngine
+      </a>
+      
+      <nav class="nav">
+        <a href="index.html" class="nav-link">Home</a>
+        <a href="getting-started.html" class="nav-link active">Getting Started</a>
+        <a href="#" class="nav-link">API Reference</a>
+        <a href="#" class="nav-link">Tutorials</a>
+        <a href="#" class="nav-link">Community</a>
+      </nav>
+      
+      <button class="theme-toggle" onclick="toggleTheme()">
+        <i class="fas fa-sun"></i>
+      </button>
+    </div>
   </header>
-  <main>
-    <h1>Getting Started</h1>
 
-    <h2>Requirements</h2>
-    <ul>
-      <li>C++20</li>
-      <li>Ninja</li>
-      <li>Compiler: Clang</li>
-    </ul>
+  <!-- Main Content -->
+  <main class="main">
+    <div class="docs-content">
+      <h1>Getting Started with GraphicsFuzzumEngine</h1>
+      
+      <p>This guide will help you set up GraphicsFuzzumEngine and create your first project.</p>
+      
+      <h2><i class="fas fa-check-circle"></i> Requirements</h2>
+      
+      <div class="requirements-list">
+        <ul>
+          <li><i class="fas fa-code"></i> <strong>C++20</strong> compatible compiler</li>
+          <li><i class="fas fa-tools"></i> <strong>Ninja</strong> build system</li>
+          <li><i class="fas fa-microchip"></i> <strong>Clang</strong></li>
+          <li><i class="fas fa-hdd"></i> 200MB+ free disk space</li>
+          <li><i class="fas fa-memory"></i> 4GB+ RAM </li>
+        </ul>
+      </div>
+      
+      <h2><i class="fas fa-download"></i> Installation</h2>
+      
+      <p>Compiling from source</p>
+      
+      <pre><code>1) Compile BuildTool(Run "./Engine/Source/Programs/FuzzumBuildTool/FuzzumBuildTool.sln" and compile)
+2) Run "./Engine/Build.bat" to generate ninja build script
+3) Run "./Build.bat" to compile engine
+4) Launch Engine "./Engine/Binaries/Engine.exe"</code></pre>
 
-    <a href="index.html" class="back-link">← Back</a>
+<p>Binary downloads</p>
+      
+      <pre><code>Official binaries for the Fuzzum Engine can be found in Releases.</code></pre>
+      
+      <h2><i class="fas fa-play-circle"></i> Creating Your First Project</h2>
+      
+      <p>Once the engine is built, you can create a new project:</p>
+      
+      <pre><code>...</code></pre>
+      
+      <!--<h2><i class="fas fa-question-circle"></i> Next Steps</h2>
+      
+      <p>After setting up your project, check out these resources:</p>
+      
+      <ul> 
+        <li><a href="#">Understanding the project structure</a></li>
+        <li><a href="#">Creating your first scene</a></li>
+        <li><a href="#">Adding 3D models and textures</a></li>
+        <li><a href="#">Scripting with the engine API</a></li>
+      </ul>-->
+      
+      <a href="index.html" class="back-link">
+        <i class="fas fa-arrow-left"></i> Back to Home
+      </a>
+    </div>
   </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-links">
+      <a href="#" class="footer-link">GitHub</a>
+      <a href="#" class="footer-link">Discord</a>
+      <a href="#" class="footer-link">Twitter</a>
+      <a href="#" class="footer-link">Contact</a>
+    </div>
+    <p>&copy; 2023 GraphicsFuzzumEngine. All rights reserved.</p>
+  </footer>
 </body>
 </html>

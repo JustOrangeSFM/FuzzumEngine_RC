@@ -4,20 +4,144 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GraphicsFuzzumEngine Documentation</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="style.css">
+  <script>
+    // Set dark theme by default
+    document.addEventListener('DOMContentLoaded', function() {
+      // Check for saved theme preference or default to dark
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      document.body.classList.add(savedTheme + '-theme');
+      
+      // Update theme toggle icon
+      updateThemeIcon(savedTheme);
+    });
+    
+    function toggleTheme() {
+      const body = document.body;
+      const isDark = body.classList.contains('dark-theme');
+      
+      if (isDark) {
+        body.classList.remove('dark-theme');
+        body.classList.add('light-theme');
+        localStorage.setItem('theme', 'light');
+        updateThemeIcon('light');
+      } else {
+        body.classList.remove('light-theme');
+        body.classList.add('dark-theme');
+        localStorage.setItem('theme', 'dark');
+        updateThemeIcon('dark');
+      }
+    }
+    
+    function updateThemeIcon(theme) {
+      const themeToggle = document.querySelector('.theme-toggle i');
+      if (themeToggle) {
+        themeToggle.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+      }
+    }
+  </script>
 </head>
-<body>
-  <header>
-    <h1>GraphicsFuzzumEngine Documentation</h1>
+<body class="dark-theme">
+  <!-- Header -->
+  <header class="header">
+    <div class="header-content">
+      <a href="index.html" class="logo">
+        <i class="fas fa-cube logo-icon"></i>
+        GraphicsFuzzumEngine
+      </a>
+      
+      <nav class="nav">
+        <a href="index.html" class="nav-link active">Home</a>
+        <a href="getting-started.html" class="nav-link">Getting Started</a>
+        <a href="#" class="nav-link">API Reference</a>
+        <a href="#" class="nav-link">Tutorials</a>
+        <a href="#" class="nav-link">Community</a>
+      </nav>
+      
+      <button class="theme-toggle" onclick="toggleTheme()">
+        <i class="fas fa-sun"></i>
+      </button>
+    </div>
   </header>
-  <main>
-    <h1>GraphicsFuzzumEngine Documentation</h1>
-    <p>Welcome to the <strong>GraphicsFuzzumEngine</strong> documentation, a cross-platform 3D engine.</p>
 
-    <h2>Contents</h2>
-    <ul>
-      <li><a href="getting-started.html">Getting started</a></li>
-    </ul>
+  <!-- Main Content -->
+  <main class="main">
+    <!-- Hero Section -->
+    <section class="hero">
+      <h1>GraphicsFuzzumEngine Documentation</h1>
+      <p>Welcome to the official documentation for <strong>GraphicsFuzzumEngine</strong>, a powerful cross-platform 3D engine designed for modern game development.</p>
+    </section>
+
+    <!-- Documentation Sections -->
+    <section class="content-section">
+      <h2 class="section-title"><i class="fas fa-book"></i> Documentation</h2>
+      
+      <div class="cards-grid">
+        <div class="card">
+          <h3 class="card-title">Getting Started</h3>
+          <p class="card-description">Learn how to set up GraphicsFuzzumEngine, install dependencies, and create your first project.</p>
+          <a href="getting-started.html" class="card-link">
+            Read Guide <i class="fas fa-arrow-right"></i>
+          </a>
+        </div>
+        
+      <!--  <div class="card">
+          <h3 class="card-title">API Reference</h3>
+          <p class="card-description">Comprehensive API documentation for all engine classes, methods, and properties.</p>
+          <a href="#" class="card-link">
+            Browse API <i class="fas fa-arrow-right"></i>
+          </a>
+        </div> 
+        
+        <div class="card">
+          <h3 class="card-title">Tutorials</h3>
+          <p class="card-description">Step-by-step tutorials covering game development concepts and engine features.</p>
+          <a href="#" class="card-link">
+            View Tutorials <i class="fas fa-arrow-right"></i>
+          </a>
+        </div> 
+        
+        <div class="card">
+          <h3 class="card-title">Best Practices</h3>
+          <p class="card-description">Learn the recommended practices for performance optimization and code structure.</p>
+          <a href="#" class="card-link">
+            Learn More <i class="fas fa-arrow-right"></i>
+          </a>
+        </div>
+      </div>
+    </section> -->
+    
+    <!-- Features Section -->
+    <section class="content-section">
+      <h2 class="section-title"><i class="fas fa-star"></i> Key Features</h2>
+      
+      <div class="cards-grid">
+        <div class="card">
+          <h3 class="card-title"><i class="fas fa-crosshairs"></i> High Performance</h3>
+          <p class="card-description">Optimized rendering pipeline with support for modern graphics APIs.</p>
+        </div>
+        
+        <div class="card">
+          <h3 class="card-title"><i class="fas fa-expand-arrows-alt"></i> Cross-Platform</h3>
+          <p class="card-description">Build for Windows and Android from a single codebase.</p>
+        </div>
+        
+        <div class="card">
+          <h3 class="card-title"><i class="fas fa-code"></i> Modern C++</h3>
+          <p class="card-description">Built with C++20 features for clean, maintainable, and performant code.</p>
+        </div>
+      </div>
+    </section>
   </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-links">
+      <a href="#" class="footer-link">GitHub</a>
+      <a href="#" class="footer-link">Telegram</a>
+    </div>
+    <p>&copy; All copyrights 2026 FuzzumEngine. All rights reserved.</p>
+  </footer>
 </body>
 </html>
