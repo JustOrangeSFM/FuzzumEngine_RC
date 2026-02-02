@@ -25,4 +25,4 @@ Official binaries for the Fuzzum Engine can be found in Releases.
 
 ## Documentation and demos
 
-The official documentation is here [docks](./docs/index.md)
+The official documentation is here [docs](./docs/index.md)
