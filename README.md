@@ -11,7 +11,6 @@ Games can be exported with one click to a number of platforms, including the maj
 Fuzzum Engine is completely free and open source under the MIT license
 
 ## Getting the engine
-![logo](./FuzzumEngineLogo.png)
 
 ### Binary downloads
 
