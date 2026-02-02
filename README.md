@@ -8,7 +8,7 @@ Games can be exported with one click to a number of platforms, including the maj
 
 ## Free, open source and community-driven
 
-Fuzzum Engine is completely free and open source under the very permissive MIT license
+Fuzzum Engine is completely free and open source under the MIT license
 
 ## Getting the engine
 
@@ -18,8 +18,10 @@ Official binaries for the Fuzzum Engine can be found in Releases.
 
 ### Compiling from source
 
-docks: soon
-for compilation instructions for every supported platform.
+1 Compile BuildTool(Run "./Engine/Source/Programs/FuzzumBuildTool/FuzzumBuildTool.sln" and compile)
+2 Run "./Engine/Build.bat" to generate ninja build script
+3 Run "./Build.bat" to compile engine
+4 Launch Engine "./Engine/Binaries/Engine.exe"
 
 ## Documentation and demos
 
