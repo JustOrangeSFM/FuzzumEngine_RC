@@ -2,8 +2,8 @@
 ![splash](./FuzzumEngineSplash.png)
 ## 2D and 3D cross-platform game engine
 
-****Fuzzum Engine** is a cross-platform
-game engine to create 2D and 3D games.** 
+*Fuzzum Engine* is a cross-platform
+game engine to create 2D and 3D games.
 Games can be exported with one click to a number of platforms, including the major desktop platforms (Windows), mobile platforms (Android).
 
 ## Free, open source and community-driven
